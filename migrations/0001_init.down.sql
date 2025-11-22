@@ -1,4 +1,4 @@
-DROP TABLE pr_reviewers;
-DROP TABLE pull_requests;
-DROP TABLE users;
-DROP TABLE teams;
+DROP TABLE IF EXISTS pr_reviewers;
+DROP TABLE IF EXISTS pull_requests;
+DROP TABLE IF EXISTS users;
+DROP TABLE IF EXISTS teams;

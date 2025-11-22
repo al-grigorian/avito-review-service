@@ -1,28 +1,29 @@
-version: '3.8'
-
 services:
   db:
     image: postgres:15-alpine
     environment:
-      POSTGRES_DB: review_db
-      POSTGRES_USER: user
+      POSTGRES_USER: app
       POSTGRES_PASSWORD: password
-    ports:
-      - "5432:5432"
+      POSTGRES_DB: review_db
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U user -d review_db"]
-      interval: 5s
+      test: ["CMD-SHELL", "pg_isready -U app -d review_db"]
+      interval: 2s
       timeout: 5s
-      retries: 10
+      retries: 20
+      start_period: 15s        # даём 15 секунд на CREATE DATABASE
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
 
   migrate:
     image: migrate/migrate
     volumes:
       - ./migrations:/migrations
     command:
-      - "-path=/migrations"
-      - "-database=postgres://user:password@db:5432/review_db?sslmode=disable"
-      - "up"
+      - -path
+      - /migrations
+      - -database
+      - postgres://app:password@db:5432/review_db?sslmode=disable
+      - up
     depends_on:
       db:
         condition: service_healthy
@@ -32,13 +33,11 @@ services:
     ports:
       - "8080:8080"
     environment:
-      DB_DSN: postgres://user:password@db:5432/review_db?sslmode=disable
+      DB_DSN: postgres://app:password@db:5432/review_db?sslmode=disable
       HTTP_PORT: 8080
     depends_on:
       migrate:
         condition: service_completed_successfully
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
+
+volumes:
+  postgres_data:

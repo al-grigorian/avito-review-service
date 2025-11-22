@@ -11,7 +11,7 @@ import (
 func New() *sqlx.DB {
 	dsn := os.Getenv("DB_DSN")
 	if dsn == "" {
-		dsn = "postgres://user:password@db:5432/review_db?sslmode=disable"
+		dsn = "postgres://app:password@db:5432/review_db?sslmode=disable"
 	}
 	db, err := sqlx.Open("postgres", dsn)
 	if err != nil {
