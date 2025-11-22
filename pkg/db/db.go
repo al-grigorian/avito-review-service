@@ -1,10 +1,24 @@
 package db
 
 import (
-    "github.com/jmoiron/sqlx"
-    _ "github.com/lib/pq"
+	"log"
+	"os"
+
+	"github.com/jmoiron/sqlx"
+	_ "github.com/lib/pq"
 )
 
-func NewDB(connStr string) (*sqlx.DB, error) {
-    return sqlx.Open("postgres", connStr)
+func New() *sqlx.DB {
+	dsn := os.Getenv("DB_DSN")
+	if dsn == "" {
+		dsn = "postgres://user:password@db:5432/review_db?sslmode=disable"
+	}
+	db, err := sqlx.Open("postgres", dsn)
+	if err != nil {
+		log.Fatal(err)
+	}
+	if err = db.Ping(); err != nil {
+		log.Fatal(err)
+	}
+	return db
 }
