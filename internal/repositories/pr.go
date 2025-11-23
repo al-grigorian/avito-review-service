@@ -133,3 +133,110 @@ func (r *PRRepository) MergePR(ctx context.Context, prID string) (*models.PullRe
 
 	return &pr, nil
 }
+
+func (r *PRRepository) ReassignReviewer(
+	ctx context.Context,
+	prID, oldUserID string,
+) (newUserID string, pr *models.PullRequest, err error) {
+
+	tx, err := r.db.BeginTxx(ctx, nil)
+	if err != nil {
+		return "", nil, err
+	}
+	defer tx.Rollback()
+
+	// проверяем статус PR
+	var status string
+	err = tx.GetContext(ctx, &status,
+		`SELECT status FROM pull_requests WHERE pull_request_id = $1`, prID)
+	if err == sql.ErrNoRows {
+		return "", nil, domain.ErrPRNotFound
+	}
+	if err != nil {
+		return "", nil, err
+	}
+	if status == "MERGED" {
+		return "", nil, domain.ErrPRMerged
+	}
+
+	// проверяем, что oldUserID действительно ревьювер
+	var exists bool
+	err = tx.GetContext(ctx, &exists,
+		`SELECT EXISTS(
+            SELECT 1 FROM pr_reviewers 
+            WHERE pull_request_id = $1 AND user_id = $2
+         )`, prID, oldUserID)
+	if err != nil {
+		return "", nil, err
+	}
+	if !exists {
+		return "", nil, domain.ErrNotAssigned
+	}
+
+	// получаем команду автора PR
+	var teamName string
+	err = tx.GetContext(ctx, &teamName,
+		`SELECT u.team_name 
+         FROM pull_requests pr 
+         JOIN users u ON u.user_id = pr.author_id 
+         WHERE pr.pull_request_id = $1`, prID)
+	if err != nil {
+		return "", nil, err
+	}
+
+	// кандидаты на замену: активные, из той же команды, не автор, не oldUserID
+	var candidates []models.User
+	err = tx.SelectContext(ctx, &candidates,
+		`SELECT user_id, username, is_active 
+         FROM users 
+         WHERE team_name = $1 
+           AND is_active = true 
+           AND user_id != (SELECT author_id FROM pull_requests WHERE pull_request_id = $2)
+           AND user_id != $3`,
+		teamName, prID, oldUserID)
+	if err != nil {
+		return "", nil, err
+	}
+	if len(candidates) == 0 {
+		return "", nil, domain.ErrNoCandidate
+	}
+
+	// случайный кандидат
+	rand.Shuffle(len(candidates), func(i, j int) {
+		candidates[i], candidates[j] = candidates[j], candidates[i]
+	})
+	newUser := candidates[0]
+
+	// заменяем в pr_reviewers
+	_, err = tx.ExecContext(ctx,
+		`DELETE FROM pr_reviewers WHERE pull_request_id = $1 AND user_id = $2`, prID, oldUserID)
+	if err != nil {
+		return "", nil, err
+	}
+	_, err = tx.ExecContext(ctx,
+		`INSERT INTO pr_reviewers (pull_request_id, user_id) VALUES ($1, $2)
+		ON CONFLICT (pull_request_id, user_id) DO NOTHING`, prID, newUser.UserID)
+	if err != nil {
+		return "", nil, err
+	}
+
+	// возвращаем обновлённый PR
+	prModel := &models.PullRequest{ID: prID}
+	err = tx.QueryRowxContext(ctx,
+		`SELECT pull_request_id, pull_request_name, author_id, status, created_at, merged_at
+         FROM pull_requests WHERE pull_request_id = $1`, prID).StructScan(prModel)
+	if err != nil {
+		return "", nil, err
+	}
+	_ = tx.SelectContext(ctx, &prModel.Reviewers,
+		`SELECT u.user_id, u.username, u.is_active 
+         FROM pr_reviewers pr 
+         JOIN users u ON u.user_id = pr.user_id 
+         WHERE pr.pull_request_id = $1`, prID)
+
+	if err = tx.Commit(); err != nil {
+		return "", nil, err
+	}
+
+	return newUser.UserID, prModel, nil
+}

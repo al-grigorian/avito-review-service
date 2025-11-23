@@ -37,3 +37,8 @@ func (s *PRService) MergePullRequest(ctx context.Context, prID string) (*models.
 	}
 	return &models.CreatePullRequestResponse{PullRequest: *pr}, nil
 }
+
+func (s *PRService) ReassignReviewer(ctx context.Context, prID, oldUserID string) (
+	newUserID string, pr *models.PullRequest, err error) {
+	return s.prRepo.ReassignReviewer(ctx, prID, oldUserID)
+}

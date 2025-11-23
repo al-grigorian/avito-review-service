@@ -28,7 +28,6 @@ func (r *TeamRepository) TeamExists(ctx context.Context, name string) (bool, err
 }
 
 func (r *TeamRepository) UpsertTeam(ctx context.Context, team models.Team) error {
-	// ← КЛЮЧЕВАЯ ПРОВЕРКА ДО ВСЕГО!
 	exists, err := r.TeamExists(ctx, team.TeamName)
 	if err != nil {
 		return err
@@ -43,7 +42,6 @@ func (r *TeamRepository) UpsertTeam(ctx context.Context, team models.Team) error
 	}
 	defer tx.Rollback()
 
-	// Теперь точно знаем, что команды нет → вставляем
 	_, err = tx.ExecContext(ctx,
 		`INSERT INTO teams (name) VALUES ($1)`, team.TeamName)
 	if err != nil {

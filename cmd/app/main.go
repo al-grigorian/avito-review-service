@@ -40,6 +40,7 @@ func main() {
 	r.Get("/team/get", teamHandler.GetTeam)
 	r.Post("/pullRequest/merge", prHandler.MergePR)
 	r.Post("/users/setIsActive", userHandler.SetIsActive)
+	r.Post("/pullRequest/reassign", prHandler.ReassignReviewer)
 
 	r.Get("/health", func(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte("ok"))
