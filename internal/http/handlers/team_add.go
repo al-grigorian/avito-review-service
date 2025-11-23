@@ -2,8 +2,10 @@ package handlers
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 
+	"github.com/al-grigorian/avito-review-service/internal/domain"
 	"github.com/al-grigorian/avito-review-service/internal/models"
 	"github.com/al-grigorian/avito-review-service/internal/services"
 )
@@ -29,7 +31,7 @@ func (h *TeamHandler) AddTeam(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := h.service.CreateTeam(r.Context(), team); err != nil {
-		if err == services.ErrTeamExists {
+		if errors.Is(err, domain.ErrTeamExists) {
 			http.Error(w, `{"error":{"code":"TEAM_EXISTS","message":"team_name already exists"}}`, http.StatusBadRequest)
 			return
 		}
