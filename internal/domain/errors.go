@@ -8,4 +8,5 @@ var (
 	ErrTeamNotFound      = errors.New("team not found")
 	ErrPRNotFound        = errors.New("pull request not found")
 	ErrAlreadyMerged     = errors.New("pull request already merged")
+	ErrUserNotFound      = errors.New("user not found")
 )

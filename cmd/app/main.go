@@ -21,23 +21,26 @@ func main() {
 	// Репозитории
 	teamRepo := repositories.NewTeamRepository(db)
 	prRepo := repositories.NewPRRepository(db)
+	userRepo := repositories.NewUserRepository(db)
 
 	// Сервисы
 	teamSvc := services.NewTeamService(teamRepo)
 	prSvc := services.NewPRService(prRepo)
+	userSvc := services.NewUserService(userRepo)
 
 	// Хендлеры
 	teamHandler := handlers.NewTeamHandler(teamSvc)
 	prHandler := handlers.NewPRHandler(prSvc)
+	userHandler := handlers.NewUserHandler(userSvc)
 
 	r := chi.NewRouter()
 
-	// Роуты
 	r.Post("/team/add", teamHandler.AddTeam)
 	r.Post("/pullRequest/create", prHandler.CreatePR)
 	r.Get("/team/get", teamHandler.GetTeam)
 	r.Post("/pullRequest/merge", prHandler.MergePR)
-	//r.Get("/pullRequest/reviewers", prHandler.GetReviewers)
+	r.Post("/users/setIsActive", userHandler.SetIsActive)
+
 	r.Get("/health", func(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte("ok"))
 	})
