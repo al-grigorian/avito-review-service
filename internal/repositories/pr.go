@@ -2,6 +2,7 @@ package repositories
 
 import (
 	"context"
+	"database/sql"
 	"math/rand"
 	"time"
 
@@ -75,6 +76,56 @@ func (r *PRRepository) CreatePR(ctx context.Context, pr models.PullRequest) (*mo
 	pr.Reviewers = reviewers
 	pr.CreatedAt = now
 	pr.Status = "OPEN"
+
+	if err := tx.Commit(); err != nil {
+		return nil, err
+	}
+
+	return &pr, nil
+}
+
+func (r *PRRepository) MergePR(ctx context.Context, prID string) (*models.PullRequest, error) {
+	tx, err := r.db.BeginTxx(ctx, nil)
+	if err != nil {
+		return nil, err
+	}
+	defer tx.Rollback()
+
+	now := time.Now()
+
+	var pr models.PullRequest
+	err = tx.QueryRowxContext(ctx,
+		`UPDATE pull_requests 
+         SET status = 'MERGED', merged_at = $1 
+         WHERE pull_request_id = $2 AND status = 'OPEN'
+         RETURNING pull_request_id, pull_request_name, author_id, status, created_at, merged_at`,
+		now, prID).StructScan(&pr)
+
+	if err == sql.ErrNoRows {
+		err = tx.QueryRowxContext(ctx,
+			`SELECT pull_request_id, pull_request_name, author_id, status, created_at, merged_at 
+             FROM pull_requests WHERE pull_request_id = $1`, prID).StructScan(&pr)
+		if err == sql.ErrNoRows {
+			return nil, domain.ErrPRNotFound
+		}
+		if err != nil {
+			return nil, err
+		}
+	}
+	if err != nil {
+		return nil, err
+	}
+
+	err = tx.SelectContext(ctx, &pr.Reviewers,
+		`SELECT u.user_id, u.username, u.is_active 
+         FROM pr_reviewers pr 
+         JOIN users u ON u.user_id = pr.user_id 
+         WHERE pr.pull_request_id = $1`, prID)
+	if err != nil {
+		return nil, err
+	}
+
+	pr.MergedAt = &now
 
 	if err := tx.Commit(); err != nil {
 		return nil, err

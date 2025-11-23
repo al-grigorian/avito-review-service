@@ -29,3 +29,11 @@ func (s *PRService) CreatePullRequest(ctx context.Context, req models.CreatePull
 
 	return &models.CreatePullRequestResponse{PullRequest: *created}, nil
 }
+
+func (s *PRService) MergePullRequest(ctx context.Context, prID string) (*models.CreatePullRequestResponse, error) {
+	pr, err := s.prRepo.MergePR(ctx, prID)
+	if err != nil {
+		return nil, err
+	}
+	return &models.CreatePullRequestResponse{PullRequest: *pr}, nil
+}

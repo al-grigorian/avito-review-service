@@ -36,7 +36,7 @@ func main() {
 	r.Post("/team/add", teamHandler.AddTeam)
 	r.Post("/pullRequest/create", prHandler.CreatePR)
 	r.Get("/team/get", teamHandler.GetTeam)
-	//r.Post("/pullRequest/merge", prHandler.MergePR)
+	r.Post("/pullRequest/merge", prHandler.MergePR)
 	//r.Get("/pullRequest/reviewers", prHandler.GetReviewers)
 	r.Get("/health", func(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte("ok"))
