@@ -18,12 +18,25 @@ func main() {
 	db := db.New()
 	defer db.Close()
 
+	// Репозитории
 	teamRepo := repositories.NewTeamRepository(db)
+	prRepo := repositories.NewPRRepository(db)
+
+	// Сервисы
 	teamSvc := services.NewTeamService(teamRepo)
+	prSvc := services.NewPRService(prRepo)
+
+	// Хендлеры
 	teamHandler := handlers.NewTeamHandler(teamSvc)
+	prHandler := handlers.NewPRHandler(prSvc)
 
 	r := chi.NewRouter()
+
+	// Роуты
 	r.Post("/team/add", teamHandler.AddTeam)
+	r.Post("/pullRequest/create", prHandler.CreatePR)
+	//r.Post("/pullRequest/merge", prHandler.MergePR)
+	//r.Get("/pullRequest/reviewers", prHandler.GetReviewers)
 	r.Get("/health", func(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte("ok"))
 	})
