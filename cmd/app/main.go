@@ -26,7 +26,7 @@ func main() {
 	// Сервисы
 	teamSvc := services.NewTeamService(teamRepo)
 	prSvc := services.NewPRService(prRepo)
-	userSvc := services.NewUserService(userRepo)
+	userSvc := services.NewUserService(userRepo, prRepo)
 
 	// Хендлеры
 	teamHandler := handlers.NewTeamHandler(teamSvc)
@@ -41,6 +41,7 @@ func main() {
 	r.Post("/pullRequest/merge", prHandler.MergePR)
 	r.Post("/users/setIsActive", userHandler.SetIsActive)
 	r.Post("/pullRequest/reassign", prHandler.ReassignReviewer)
+	r.Get("/users/getReview", userHandler.GetReview)
 
 	r.Get("/health", func(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte("ok"))

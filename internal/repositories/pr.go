@@ -240,3 +240,18 @@ func (r *PRRepository) ReassignReviewer(
 
 	return newUser.UserID, prModel, nil
 }
+
+func (r *PRRepository) GetReviewPRs(ctx context.Context, userID string) ([]models.PullRequestShort, error) {
+	var prs []models.PullRequestShort
+	err := r.db.SelectContext(ctx, &prs,
+		`SELECT 
+			pr.pull_request_id,
+			pr.pull_request_name,
+			pr.author_id,
+			pr.status
+		 FROM pull_requests pr
+		 JOIN pr_reviewers rev ON rev.pull_request_id = pr.pull_request_id
+		 WHERE rev.user_id = $1 AND pr.status = 'OPEN'
+		 ORDER BY pr.created_at DESC`, userID)
+	return prs, err
+}

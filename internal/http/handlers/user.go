@@ -60,3 +60,20 @@ func (h *UserHandler) SetIsActive(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(resp)
 }
+
+func (h *UserHandler) GetReview(w http.ResponseWriter, r *http.Request) {
+	userID := r.URL.Query().Get("user_id")
+	if userID == "" {
+		http.Error(w, `{"error":{"code":"BAD_REQUEST","message":"user_id required"}}`, http.StatusBadRequest)
+		return
+	}
+
+	resp, err := h.service.GetReviewPRs(r.Context(), userID)
+	if err != nil {
+		http.Error(w, `{"error":{"code":"INTERNAL","message":"server error"}}`, http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(resp)
+}
