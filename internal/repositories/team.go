@@ -68,12 +68,31 @@ func (r *TeamRepository) UpsertTeam(ctx context.Context, team models.Team) error
 }
 
 func (r *TeamRepository) GetTeamByName(ctx context.Context, name string) (*models.Team, bool) {
-	var t models.Team
-	t.TeamName = name
-	err := r.db.SelectContext(ctx, &t.Members,
+	var team models.Team
+	team.TeamName = name
+
+	err := r.db.SelectContext(ctx, &team.Members,
 		`SELECT user_id, username, is_active FROM users WHERE team_name = $1`, name)
-	if err != nil || len(t.Members) == 0 {
+	if err != nil {
 		return nil, false
 	}
-	return &t, true
+	if len(team.Members) == 0 {
+		return nil, false
+	}
+	return &team, true
+}
+
+func (r *TeamRepository) GetTeam(ctx context.Context, teamName string) (*models.Team, error) {
+	var team models.Team
+	team.TeamName = teamName
+
+	err := r.db.SelectContext(ctx, &team.Members,
+		`SELECT user_id, username, is_active FROM users WHERE team_name = $1 ORDER BY user_id`, teamName)
+	if err != nil {
+		return nil, err
+	}
+	if len(team.Members) == 0 {
+		return nil, domain.ErrTeamNotFound
+	}
+	return &team, nil
 }

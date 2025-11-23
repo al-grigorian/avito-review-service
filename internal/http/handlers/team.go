@@ -43,3 +43,24 @@ func (h *TeamHandler) AddTeam(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusCreated)
 	json.NewEncoder(w).Encode(map[string]any{"team": team})
 }
+
+func (h *TeamHandler) GetTeam(w http.ResponseWriter, r *http.Request) {
+	teamName := r.URL.Query().Get("team_name")
+	if teamName == "" {
+		http.Error(w, `{"error":{"code":"BAD_REQUEST","message":"team_name required"}}`, http.StatusBadRequest)
+		return
+	}
+
+	team, err := h.service.GetTeam(r.Context(), teamName)
+	if err != nil {
+		if errors.Is(err, domain.ErrTeamNotFound) {
+			http.Error(w, `{"error":{"code":"TEAM_NOT_FOUND","message":"team not found"}}`, http.StatusNotFound)
+			return
+		}
+		http.Error(w, `{"error":{"code":"INTERNAL","message":"server error"}}`, http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(team)
+}
